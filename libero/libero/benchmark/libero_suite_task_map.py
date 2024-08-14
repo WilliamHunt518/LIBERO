@@ -139,4 +139,9 @@ libero_task_map = {
         "STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_on_the_cabinet_shelf",
         "STUDY_SCENE4_pick_up_the_book_on_the_right_and_place_it_under_the_cabinet_shelf",
     ],
+    "miniset_3": [
+        "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it",
+        "KITCHEN_SCENE4_put_the_black_bowl_in_the_bottom_drawer_of_the_cabinet_and_close_it",
+        "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it",
+    ],
 }

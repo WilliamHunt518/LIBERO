@@ -22,7 +22,6 @@ def register_policy(policy_class):
 
     REGISTERED_POLICIES[policy_name] = policy_class
 
-
 def get_policy_class(policy_name):
     """Get the policy class from the registry."""
     if policy_name.lower() not in REGISTERED_POLICIES:
