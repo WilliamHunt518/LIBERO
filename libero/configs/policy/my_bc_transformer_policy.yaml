@@ -1,7 +1,7 @@
 policy_type: MyBCTransformerPolicy
 extra_num_layers: 0
-extra_hidden_size: 128
-embed_size: 64
+extra_hidden_size: 48
+embed_size: 24
 
 transformer_input_size: null
 transformer_num_layers: 2

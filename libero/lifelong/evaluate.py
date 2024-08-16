@@ -66,6 +66,7 @@ policy_map = {
     "bc_rnn_policy": "BCRNNPolicy",
     "bc_transformer_policy": "BCTransformerPolicy",
     "bc_vilt_policy": "BCViLTPolicy",
+    "my_bc_transformer_policy": "MyBCTransformerPolicy"
 }
 
 
@@ -91,7 +92,7 @@ def parse_args():
         "--policy",
         type=str,
         required=True,
-        choices=["bc_rnn_policy", "bc_transformer_policy", "bc_vilt_policy"],
+        choices=["bc_rnn_policy", "bc_transformer_policy", "bc_vilt_policy", "my_bc_transformer_policy"],
     )
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--ep", type=int)
