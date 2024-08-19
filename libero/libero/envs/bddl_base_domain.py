@@ -314,6 +314,9 @@ class BDDLBaseDomain(SingleArmEnv):
                 **self._arena_properties,
             )
         elif self._arena_type == "kitchen":
+            #    xpos = self.robots[0].robot_model.base_xpos_offset["kitchen_table"](
+            #    KeyError: 'kitchen_table'
+
             xpos = self.robots[0].robot_model.base_xpos_offset["kitchen_table"](
                 self.kitchen_table_full_size[0]
             )

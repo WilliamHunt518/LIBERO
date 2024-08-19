@@ -75,29 +75,51 @@ def evaluate_one_task_success(
             "camera_widths": cfg.data.img_w,
         }
 
+        # Use the get method to safely access the 'robots' attribute
+        robots = cfg.get("robots", None)
+
+        if robots is not None:
+            env_args["robots"] = robots
+            print("Config overrides robot type to: '" + str(cfg.robots) + "'")
+        else:
+            print("Not found")
+
+
         env_num = min(cfg.eval.num_procs, cfg.eval.n_eval) if cfg.eval.use_mp else 1
         eval_loop_num = (cfg.eval.n_eval + env_num - 1) // env_num
 
         # Try to handle the frame buffer issue
         env_creation = False
 
-        count = 0
-        while not env_creation and count < 5:
-            try:
-                if env_num == 1:
-                    env = DummyVectorEnv(
-                        [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
-                    )
-                else:
-                    env = SubprocVectorEnv(
-                        [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
-                    )
-                env_creation = True
-            except:
-                time.sleep(5)
-                count += 1
-        if count >= 5:
-            raise Exception("Failed to create environment")
+        # count = 0
+        # while not env_creation and count < 5:
+        #     try:
+        #         if env_num == 1:
+        #             env = DummyVectorEnv(
+        #                 [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
+        #             )
+        #         else:
+        #             env = SubprocVectorEnv(
+        #                 [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
+        #             )
+        #         env_creation = True
+        #     except:
+        #         time.sleep(5)
+        #         count += 1
+        # if count >= 5:
+        #     raise Exception("Failed to create environment")
+
+        if env_num == 1:
+            env = DummyVectorEnv(
+                [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
+            )
+        else:
+            env = SubprocVectorEnv(
+                [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
+            )
+        env_creation = True
+
+
 
         ### Evaluation loop
         # get fixed init states to control the experiment randomness
