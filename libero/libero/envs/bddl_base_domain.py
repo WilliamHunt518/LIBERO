@@ -806,8 +806,15 @@ class BDDLBaseDomain(SingleArmEnv):
             action = np.array(action)
             action = np.concatenate((action[:3], action[-1:]), axis=-1)
 
+        # At this point it shouldn't be called as self.done
+        if self.done:
+            print("before: " + str(self.done))
+
         obs, reward, done, info = super().step(action)
         done = self._check_success()
+
+        if done:
+            print("after: " + str(done))
 
         return obs, reward, done, info
 

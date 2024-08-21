@@ -112,7 +112,35 @@ class BasePolicy(nn.Module, metaclass=PolicyMeta):
         return data
 
     def compute_loss(self, data, reduction="mean"):
+        # Deep copy the data to keep the original for comparison
+        import copy
+        original_data = copy.deepcopy(data)
+
+        # Preprocess the data
         data = self.preprocess_input(data, train_mode=True)
+
+        # Check for changes in shape and type
+        #print("Checking for changes after preprocess_input:")
+        for key in original_data.keys():
+            if isinstance(original_data[key], torch.Tensor):
+                if original_data[key].shape != data[key].shape or type(original_data[key]) != type(data[key]):
+                    print(f"Change detected in {key}:")
+                    print(f"  Original shape: {original_data[key].shape}, New shape: {data[key].shape}")
+                    print(f"  Original type: {type(original_data[key])}, New type: {type(data[key])}")
+                    print()
+            elif isinstance(original_data[key], dict):
+                for sub_key in original_data[key].keys():
+                    if isinstance(original_data[key][sub_key], torch.Tensor):
+                        if original_data[key][sub_key].shape != data[key][sub_key].shape or type(
+                                original_data[key][sub_key]) != type(data[key][sub_key]):
+                            print(f"Change detected in {key}['{sub_key}']:")
+                            print(
+                                f"  Original shape: {original_data[key][sub_key].shape}, New shape: {data[key][sub_key].shape}")
+                            print(
+                                f"  Original type: {type(original_data[key][sub_key])}, New type: {type(data[key][sub_key])}")
+                            print()
+
+        # Compute the loss
         dist = self.forward(data)
         loss = self.policy_head.loss_fn(dist, data["actions"], reduction)
         return loss

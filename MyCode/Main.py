@@ -33,8 +33,8 @@ class Main:
         self.cfg.bddl_folder = get_libero_path("bddl_files")
         self.cfg.init_states_folder = get_libero_path("init_states")
         self.cfg.eval.num_procs = 1
-        self.cfg.eval.n_eval = 1
-        self.cfg.train.n_epochs = 50
+        #self.cfg.eval.n_eval = 1
+        self.cfg.train.n_epochs = 1
         # Set to 25 in real scenarios
 
         # Checkpoint saved to ./experiments/miniset_3/Sequential/MyBCTransformerPolicy_seed10000/run_027/final_model.pth
@@ -62,7 +62,7 @@ class Main:
 
         load = True
         if load:
-            #checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_014", "checkpoints", "checkpoint_task_2.pth")
+            #checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_120", "checkpoints", "checkpoint_task_0.pth")
             checkpoint_path = "./TrainedModels/run_027/final_model.pth"
             if os.path.exists(checkpoint_path):
                 trainer.algo.load_checkpoint(checkpoint_path)
@@ -93,13 +93,16 @@ class Main:
 
         # Step 5: Perform evaluation
         self.evaluate()
+        #UR5e: Task 0: Loss AUC = 5.2222746775700495, Success Rate = 0.0
+        #Panda:Task 0: Loss AUC = 5.296631717681885,  Success Rate = 0.0
+
 
     # --------------------------------- #
 
 
 
-        my_visualiser = Visualiser(self.cfg, env_num, action_dim, trainer.algo, self.benchmark)
-        my_visualiser.visualize()
+        #my_visualiser = Visualiser(self.cfg, env_num, action_dim, trainer.algo, self.benchmark)
+        #my_visualiser.visualize()
 
     def evaluate(self):
         """
@@ -120,13 +123,15 @@ class Main:
         for i in range(self.benchmark.n_tasks):
             print("    -> Evaluating task " + str(i))
             # Evaluate loss and success
-            L = evaluate_loss(self.cfg, self.algo, self.benchmark, self.datasets[:i + 1])
-            S = evaluate_success(self.cfg, self.algo, self.benchmark, list(range((i + 1) * gsz)))
+            #L = evaluate_loss(self.cfg, self.algo, self.benchmark, self.datasets[:i + 1])
+            #S = evaluate_success(self.cfg, self.algo, self.benchmark, list(range((i + 1) * gsz)))
+            S = evaluate_success(self.cfg, self.algo, self.benchmark, [0])
 
-            result_summary["L_conf_mat"][i][:i + 1] = L
+            #result_summary["L_conf_mat"][i][:i + 1] = L
             result_summary["S_conf_mat"][i][:i + 1] = S
 
-            print(f"Task {i}: Loss AUC = {L.mean()}, Success Rate = {S.mean()}")
+            #print(f"Task {i}: Loss AUC = {L.mean()}, Success Rate = {S.mean()}")
+            print(f"Task {i}: Success Rate = {S.mean()}")
 
         # Save the result summary if needed
         torch.save(result_summary, os.path.join(self.cfg.experiment_dir, 'evaluation_result.pt'))
@@ -137,4 +142,3 @@ if __name__ == "__main__":
     m.main()
 
     print("Done")
-    m.evaluate()

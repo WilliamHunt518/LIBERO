@@ -127,38 +127,37 @@ class ControlEnv:
         self.env._update_observables(force=force)
 
     def set_state(self, mujoco_state):
-        self.env.sim.set_state_from_flattened(mujoco_state)
-        # print(mujoco_state)
-        #
-        # """
-        # We effectively override the self.env.sim.set_state_from_flattened(mujoco_state) call by rewriting it here,
-        #  giving us a chance to fix the size mismatch
-        # """
-        # #state = MjSimState.from_flattened(mujoco_state, self.env.sim)
-        # #state = self.env.sim.get_state()
-        # env = self.env
-        # state = self.env.sim #MjSim
-        # data = self.env.sim.data
-        #
-        # # , MjSimState
-        # state = MjSimState.from_flattened(mujoco_state, self.env.sim)
-        #
-        # print("self.env.sim.data.qpos.shape:", self.env.sim.data.qpos.shape)
-        # print("sself.env.sim.data.qvel.shape:", self.env.sim.data.qvel.shape)
-        # print("state.qpos.shape:", state.qpos.shape)
-        # print("state.qvel.shape:", state.qvel.shape)
-        #
-        # my_decoder = MyDecoder()
-        # newQPos, newQVel = my_decoder.decode(state.qpos, state.qvel)
-        #
-        # self.env.sim.data.qpos[:] = newQPos
-        # self.env.sim.data.qvel[:] = newQVel
-        #
-        # self.env.sim.data.time = state.time
-        #
-        # print("After")
-        # print("self.env.sim.data.qpos.shape:", self.env.sim.data.qpos.shape)
-        # print("self.env.sim.data.qvel.shape:", self.env.sim.data.qvel.shape)
+        print(mujoco_state)
+
+        """
+        We effectively override the self.env.sim.set_state_from_flattened(mujoco_state) call by rewriting it here,
+         giving us a chance to fix the size mismatch
+        """
+        #state = MjSimState.from_flattened(mujoco_state, self.env.sim)
+        #state = self.env.sim.get_state()
+        env = self.env
+        state = self.env.sim #MjSim
+        data = self.env.sim.data
+
+        # , MjSimState
+        state = MjSimState.from_flattened(mujoco_state, self.env.sim)
+
+        print("self.env.sim.data.qpos.shape:", self.env.sim.data.qpos.shape)
+        print("sself.env.sim.data.qvel.shape:", self.env.sim.data.qvel.shape)
+        print("state.qpos.shape:", state.qpos.shape)
+        print("state.qvel.shape:", state.qvel.shape)
+
+        my_decoder = MyDecoder()
+        newQPos, newQVel = my_decoder.decode_env_side(state.qpos, state.qvel, self.env.sim.data.qpos.shape, self.env.sim.data.qvel.shape)
+
+        self.env.sim.data.qpos[:] = newQPos
+        self.env.sim.data.qvel[:] = newQVel
+
+        self.env.sim.data.time = state.time
+
+        print("After")
+        print("self.env.sim.data.qpos.shape:", self.env.sim.data.qpos.shape)
+        print("self.env.sim.data.qvel.shape:", self.env.sim.data.qvel.shape)
 
     def reset_from_xml_string(self, xml_string):
         self.env.reset_from_xml_string(xml_string)

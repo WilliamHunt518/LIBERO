@@ -80,7 +80,7 @@ def evaluate_one_task_success(
 
         if robots is not None:
             env_args["robots"] = robots
-            print("Config overrides robot type to: '" + str(cfg.robots) + "'")
+            print("Config overrides robot type to: " + str(cfg.robots))
         else:
             print("Not found")
 
@@ -129,14 +129,16 @@ def evaluate_one_task_success(
         init_states = torch.load(init_states_path)
         num_success = 0
         for i in range(eval_loop_num):
+            print("Eval run " + str(i))
             env.reset()
             indices = np.arange(i * env_num, (i + 1) * env_num) % init_states.shape[0]
             init_states_ = init_states[indices]
 
-            dones = [False] * env_num
+            #dones = [False] * env_num
             steps = 0
             algo.reset()
             obs = env.set_init_state(init_states_)
+            #print("    Gathered observations")
 
             # dummy actions [env_num, 7] all zeros for initial physics simulation
             dummy = np.zeros((env_num, 7))
@@ -144,12 +146,15 @@ def evaluate_one_task_success(
                 obs, _, _, _ = env.step(dummy)
 
             if task_str != "":
+                #print("    For task: " + task_str)
                 sim_state = env.get_sim_state()
                 for k in range(env_num):
                     if i * env_num + k < cfg.eval.n_eval and sim_states is not None:
                         sim_states[i * env_num + k].append(sim_state[k])
 
+            #print("    Running sim for " + str(cfg.eval.max_steps) + " steps")
             while steps < cfg.eval.max_steps:
+                #print("        Step " + str(steps))
                 steps += 1
 
                 data = raw_obs_to_tensor_obs(obs, task_emb, cfg)
@@ -165,17 +170,26 @@ def evaluate_one_task_success(
                             sim_states[i * env_num + k].append(sim_state[k])
 
                 # check whether succeed
-                for k in range(env_num):
-                    dones[k] = dones[k] or done[k]
+                #for k in range(env_num):
+                    #dones[k] = dones[k] or done[k]
 
-                if all(dones):
+                if env.workers[0].env.env.done: #if all(dones):
+                    print("    Success!")
+                    num_success += 1
                     break
 
-            # a new form of success record
-            for k in range(env_num):
-                if i * env_num + k < cfg.eval.n_eval:
-                    num_success += int(dones[k])
 
+                    # TODO This now works perfectly every time -> I assume this means it isn't loading the robot properly,
+                    #  although a quick debugging suggests it is? Perhaps it is buried in the .init file or something?
+                    #  Next time I will fix the visualiser and see if that helps reveal the problem. If not, maybe we
+                    #  need to regenerate the init files which could be difficult.
+
+            # # a new form of success record
+            # for k in range(env_num):
+            #     if i * env_num + k < cfg.eval.n_eval:
+            #         num_success += int(dones[k])
+
+        #print("num sucesses = " + str(num_success))
         success_rate = num_success / cfg.eval.n_eval
         env.close()
         gc.collect()

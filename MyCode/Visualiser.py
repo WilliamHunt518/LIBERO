@@ -50,6 +50,8 @@ class Visualiser:
             [lambda: OffScreenRenderEnv(**env_args) for _ in range(self.env_num)]
         )
 
+        # TODO This probably needs the same change as the other code
+
         init_states_path = os.path.join(
             self.cfg.init_states_folder, task.problem_folder, task.init_states_file
         )

@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-
-from MyCode.MyDecoder import encode_obs_model_side
 from libero.lifelong.models.modules.rgb_modules import *
 from libero.lifelong.models.modules.language_modules import *
 from libero.lifelong.models.base_policy import BasePolicy
@@ -67,13 +65,6 @@ class ExtraModalityTokens(nn.Module):
             [x["encoder"] for x in self.extra_encoders.values()]
         )
 
-        # Panda:
-        #   ee_dim = 3
-        #   gripper states dim = 2
-        #   joint states dim = 7
-        #   proprio_dim = 3
-        #   self.extra_encoders = size:2 (joint_states, gripper_states)
-
     def forward(self, obs_dict):
         """
         obs_dict: {
@@ -85,69 +76,18 @@ class ExtraModalityTokens(nn.Module):
         """
         tensor_list = []
 
-        # print("Forward Start:")
-        # print("Obs dict elements:")
-        # # obs_dict is a dict of size 4. First is agentview_rgb
-        # for o in obs_dict:
-        #     print(o + "    " + str(obs_dict[o].shape))
-        # print()
-        # print("=========================")
+        for (use_modality, modality_name) in [
+            (self.use_joint, "joint_states"),
+            (self.use_gripper, "gripper_states"),
+            (self.use_ee, "ee_states"),
+        ]:
 
-        #=========================
-        # Forward
-        # Start:
-        # Obs
-        # dict
-        # elements:
-        # agentview_rgb
-        # torch.Size([16, 10, 3, 128, 128])
-        # eye_in_hand_rgb
-        # torch.Size([16, 10, 3, 128, 128])
-        # gripper_states
-        # torch.Size([16, 10, 2])
-        # joint_states
-        # torch.Size([16, 10, 7])
-        # #
-        # =========================
-
-        try:
-            for (use_modality, modality_name) in [
-                (self.use_joint, "joint_states"),
-                (self.use_gripper, "gripper_states"),
-                (self.use_ee, "ee_states"),
-            ]:
-                if use_modality:
-                    tensor_list.append(
-                        self.extra_encoders[modality_name]["encoder"](
-                            obs_dict[modality_name]
-                        )
+            if use_modality:
+                tensor_list.append(
+                    self.extra_encoders[modality_name]["encoder"](
+                        obs_dict[modality_name]
                     )
-        except:
-            # TODO Here is where we run into the problem that the extra_encoders or something similar is not the same
-            #  size. I think we need to either add one, or (for now) add an extra one trained on something else
-
-            print("AHHHHHHHHHHHH")
-            print("At error:")
-            print("Forward Start:")
-            print("Obs dict elements:")
-            # obs_dict is a dict of size 4. First is agentview_rgb
-            for o in obs_dict:
-                print(o + "    " + str(obs_dict[o].shape))
-            print()
-            print("=========================")
-
-            # Forward Start:
-            # Obs dict elements:
-            # agentview_rgb    torch.Size([1, 1, 3, 128, 128])
-            # eye_in_hand_rgb    torch.Size([1, 1, 3, 128, 128])
-            # gripper_states    torch.Size([1, 1, 6])
-            # joint_states    torch.Size([1, 1, 6])
-
-
-            # For Panda:
-            #    Obs dict:
-            #
-
+                )
 
         x = torch.stack(tensor_list, dim=-2)
         return x
@@ -271,47 +211,8 @@ class MyBCTransformerPolicy(BasePolicy):
     def get_action(self, data):
         self.eval()
         with torch.no_grad():
-            data = self.preprocess_input(data, train_mode=False)  # This adds a time dimension ([PREV SHAPE] -> [1, PREV SHAPE])
-
-            # print("before:")
-            # for key, value in data.items():
-            #     if isinstance(value, torch.Tensor):
-            #         print(f"{''}{key} shape: {value.shape}")
-            #     elif isinstance(value, dict):
-            #         print(f"{''}{key} dict:")
-            #         for k, v in data[key].items():
-            #             print(f"{''}{k} shape: {v.shape}")
-            # print()
-
-            data = encode_obs_model_side(data)
-
-            # print("after:")
-            # for key, value in data.items():
-            #     if isinstance(value, torch.Tensor):
-            #         print(f"{''}{key} shape: {value.shape}")
-            #     elif isinstance(value, dict):
-            #         print(f"{''}{key} dict:")
-            #         for k, v in data[key].items():
-            #             print(f"{''}{k} shape: {v.shape}")
-            # print()
-
-            # For UR5e:
-            # agentview_rgb shape: torch.Size([1, 1, 3, 128, 128])
-            # eye_in_hand_rgb shape: torch.Size([1, 1, 3, 128, 128])
-            # gripper_states shape: torch.Size([1, 1, 6])
-            # joint_states shape: torch.Size([1, 1, 6])
-            # task_emb shape: torch.Size([1, 768])
-
-            # For Panda:
-            # agentview_rgb
-            # shape: torch.Size([1, 1, 3, 128, 128])
-            # eye_in_hand_rgb
-            # shape: torch.Size([1, 1, 3, 128, 128])
-            # gripper_states shape: torch.Size([1, 1, 2])
-            # joint_states shape: torch.Size([1, 1, 7])
-            # task_emb shape: torch.Size([1, 768])
-
-            x = self.spatial_encode(data)  # Here we can't spatially encode as the data is different (6 dims for UR5e, and I think 7 for Panada)
+            data = self.preprocess_input(data, train_mode=False)
+            x = self.spatial_encode(data)  # Here we can't spatially encode as the data is different (6 dims for UR5e)
             self.latent_queue.append(x)
             if len(self.latent_queue) > self.max_seq_len:
                 self.latent_queue.pop(0)

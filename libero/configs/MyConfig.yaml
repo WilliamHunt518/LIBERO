@@ -5,7 +5,7 @@ defaults:
   - data: default
   - policy: my_bc_transformer_policy
   - train: MyTrainingConfig
-  - eval: default
+  - eval: MyEval
   - lifelong: base
   - test: null
 
