@@ -34,7 +34,6 @@ class Main:
         self.cfg.init_states_folder = get_libero_path("init_states")
         self.cfg.eval.num_procs = 1
         #self.cfg.eval.n_eval = 1
-        self.cfg.train.n_epochs = 1
         # Set to 25 in real scenarios
 
         # Checkpoint saved to ./experiments/miniset_3/Sequential/MyBCTransformerPolicy_seed10000/run_027/final_model.pth
@@ -60,10 +59,15 @@ class Main:
         # Step 3: Initialize and train or load checkpoint
         trainer = MyTrainer(self.cfg, self.shape_meta, self.datasets, self.benchmark, checkpoint_dir)
 
-        load = True
+        NUM_TRAINING_LOOPS = 10
+        self.cfg.train.n_epochs = 5  # We alter the training code so this is # epochs for a task within the higher loop
+
+        print("With chkpt dir = " + checkpoint_dir)
+
+        load = False
         if load:
-            #checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_120", "checkpoints", "checkpoint_task_0.pth")
-            checkpoint_path = "./TrainedModels/run_027/final_model.pth"
+            checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_008", "final_model_0.pth")
+            #checkpoint_path = "./TrainedModels/run_027/checkpoints/checkpoint_task_0.pth"
             if os.path.exists(checkpoint_path):
                 trainer.algo.load_checkpoint(checkpoint_path)
                 print("Checkpoint loaded, resuming training...")
@@ -72,7 +76,8 @@ class Main:
                 quit()
         else:
             print("Training new model from scratch")
-            trainer.train()
+            for i in range(0, NUM_TRAINING_LOOPS):
+                trainer.train(i)
 
     # ------ Perform Evaluation ------- #
         # Step 1: Load configuration
@@ -92,7 +97,7 @@ class Main:
         #datasets, shape_meta = dataset_preparation.get_datasets()
 
         # Step 5: Perform evaluation
-        self.evaluate()
+        #self.evaluate()
         #UR5e: Task 0: Loss AUC = 5.2222746775700495, Success Rate = 0.0
         #Panda:Task 0: Loss AUC = 5.296631717681885,  Success Rate = 0.0
 
@@ -123,11 +128,11 @@ class Main:
         for i in range(self.benchmark.n_tasks):
             print("    -> Evaluating task " + str(i))
             # Evaluate loss and success
-            #L = evaluate_loss(self.cfg, self.algo, self.benchmark, self.datasets[:i + 1])
-            #S = evaluate_success(self.cfg, self.algo, self.benchmark, list(range((i + 1) * gsz)))
-            S = evaluate_success(self.cfg, self.algo, self.benchmark, [0])
+            L = evaluate_loss(self.cfg, self.algo, self.benchmark, self.datasets[:i + 1])
+            S = evaluate_success(self.cfg, self.algo, self.benchmark, list(range((i + 1) * gsz)))
+            #S = evaluate_success(self.cfg, self.algo, self.benchmark, [0])
 
-            #result_summary["L_conf_mat"][i][:i + 1] = L
+            result_summary["L_conf_mat"][i][:i + 1] = L
             result_summary["S_conf_mat"][i][:i + 1] = S
 
             #print(f"Task {i}: Loss AUC = {L.mean()}, Success Rate = {S.mean()}")

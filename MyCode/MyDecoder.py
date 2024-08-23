@@ -32,12 +32,24 @@ class MyDecoder():
         qpos_padding = (0, qpos_target_shape[0] - qpos.shape[0])  # Padding for qpos
         qvel_padding = (0, qvel_target_shape[0] - qvel.shape[0])  # Padding for qvel
 
-        # Pad qpos and qvel to the target dimensions with zeros
-        padded_qpos = np.pad(qpos, qpos_padding, mode='constant')
-        padded_qvel = np.pad(qvel, qvel_padding, mode='constant')
+        # Check if any padding is necessary
+        if qpos_padding[1] > 0:
+            # Pad qpos to the target dimensions with zeros
+            padded_qpos = np.pad(qpos, qpos_padding, mode='constant')
+            print(
+                f"Converted original qpos shape from {qpos.shape} to {padded_qpos.shape} by adding {qpos_padding[1]} zeros.")
+        else:
+            # No padding needed, use the original qpos
+            padded_qpos = qpos
 
-        print(f"Converted original qpos shape from {qpos.shape} to {padded_qpos.shape} by adding {qpos_padding[1]} zeros.")
-        print(f"Converted original qvel shape from {qvel.shape} to {padded_qvel.shape} by adding {qvel_padding[1]} zeros.")
+        if qvel_padding[1] > 0:
+            # Pad qvel to the target dimensions with zeros
+            padded_qvel = np.pad(qvel, qvel_padding, mode='constant')
+            print(
+                f"Converted original qvel shape from {qvel.shape} to {padded_qvel.shape} by adding {qvel_padding[1]} zeros.")
+        else:
+            # No padding needed, use the original qvel
+            padded_qvel = qvel
 
         return padded_qpos, padded_qvel
 

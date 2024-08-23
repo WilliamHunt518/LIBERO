@@ -8,6 +8,7 @@ import time
 import torch
 import torch.multiprocessing as mp
 import torch.nn.functional as F
+from IPython.core.display_functions import display
 from torch.utils.data import DataLoader
 
 from libero.libero.envs import OffScreenRenderEnv, SubprocVectorEnv, DummyVectorEnv
@@ -58,6 +59,13 @@ def evaluate_one_task_success(
                 evaluation, mainly for visualization and debugging purpose
     task_str:   the key to access sim_states dictionary
     """
+
+    import os
+    import imageio
+    from IPython.display import HTML
+    from base64 import b64encode
+    import gc
+
     with Timer() as t:
         if cfg.lifelong.algo == "PackNet":  # need preprocess weights for PackNet
             algo = algo.get_eval_algo(task_id)
@@ -73,41 +81,16 @@ def evaluate_one_task_success(
             ),
             "camera_heights": cfg.data.img_h,
             "camera_widths": cfg.data.img_w,
+            "horizon": 10_000
         }
 
-        # Use the get method to safely access the 'robots' attribute
         robots = cfg.get("robots", None)
-
         if robots is not None:
             env_args["robots"] = robots
             print("Config overrides robot type to: " + str(cfg.robots))
         else:
             print("Not found")
 
-
-        env_num = min(cfg.eval.num_procs, cfg.eval.n_eval) if cfg.eval.use_mp else 1
-        eval_loop_num = (cfg.eval.n_eval + env_num - 1) // env_num
-
-        # Try to handle the frame buffer issue
-        env_creation = False
-
-        # count = 0
-        # while not env_creation and count < 5:
-        #     try:
-        #         if env_num == 1:
-        #             env = DummyVectorEnv(
-        #                 [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
-        #             )
-        #         else:
-        #             env = SubprocVectorEnv(
-        #                 [lambda: OffScreenRenderEnv(**env_args) for _ in range(env_num)]
-        #             )
-        #         env_creation = True
-        #     except:
-        #         time.sleep(5)
-        #         count += 1
-        # if count >= 5:
-        #     raise Exception("Failed to create environment")
 
         if env_num == 1:
             env = DummyVectorEnv(
@@ -119,42 +102,43 @@ def evaluate_one_task_success(
             )
         env_creation = True
 
-
-
-        ### Evaluation loop
-        # get fixed init states to control the experiment randomness
+        # Get fixed init states to control the experiment randomness
         init_states_path = os.path.join(
             cfg.init_states_folder, task.problem_folder, task.init_states_file
         )
         init_states = torch.load(init_states_path)
         num_success = 0
+
+        # Video recording variables
+        obs_tensors = [[] for _ in range(env_num)]
+        video_paths = []
+
         for i in range(eval_loop_num):
             print("Eval run " + str(i))
             env.reset()
             indices = np.arange(i * env_num, (i + 1) * env_num) % init_states.shape[0]
             init_states_ = init_states[indices]
 
-            #dones = [False] * env_num
+            dones = [False] * env_num
+
             steps = 0
             algo.reset()
             obs = env.set_init_state(init_states_)
-            #print("    Gathered observations")
 
-            # dummy actions [env_num, 7] all zeros for initial physics simulation
+            # Dummy actions for initial physics simulation
             dummy = np.zeros((env_num, 7))
             for _ in range(5):
                 obs, _, _, _ = env.step(dummy)
 
             if task_str != "":
-                #print("    For task: " + task_str)
                 sim_state = env.get_sim_state()
                 for k in range(env_num):
                     if i * env_num + k < cfg.eval.n_eval and sim_states is not None:
                         sim_states[i * env_num + k].append(sim_state[k])
 
-            #print("    Running sim for " + str(cfg.eval.max_steps) + " steps")
             while steps < cfg.eval.max_steps:
-                #print("        Step " + str(steps))
+                #if steps % 100 == 0:
+                    #print("Step: " + str(steps))
                 steps += 1
 
                 data = raw_obs_to_tensor_obs(obs, task_emb, cfg)
@@ -162,37 +146,53 @@ def evaluate_one_task_success(
 
                 obs, reward, done, info = env.step(actions)
 
-                # record the sim states for replay purpose
+                # Record observations for video
+                for k in range(env_num):
+                    obs_tensors[k].append(obs[k]["agentview_image"])
+
                 if task_str != "":
                     sim_state = env.get_sim_state()
                     for k in range(env_num):
                         if i * env_num + k < cfg.eval.n_eval and sim_states is not None:
                             sim_states[i * env_num + k].append(sim_state[k])
 
-                # check whether succeed
-                #for k in range(env_num):
-                    #dones[k] = dones[k] or done[k]
+#---------------
+                for k in range(env_num):
+                    dones[i] = all(done)
 
-                if env.workers[0].env.env.done: #if all(dones):
-                    print("    Success!")
+                if all(dones):
+                    print("    Success")
                     num_success += 1
                     break
+# ---------------
 
+                if env.workers[0].env.env.done or steps == cfg.eval.max_steps:
+                    print("    Timed Out! (Failure)")
+                    print("    At end, done = " + str(done))
+                    print("    And dones    = " + str(dones))
+                    break
 
-                    # TODO This now works perfectly every time -> I assume this means it isn't loading the robot properly,
-                    #  although a quick debugging suggests it is? Perhaps it is buried in the .init file or something?
-                    #  Next time I will fix the visualiser and see if that helps reveal the problem. If not, maybe we
-                    #  need to regenerate the init files which could be difficult.
+            # Create video for each evaluation run
+            images = [img[::-1] for img in obs_tensors[0]]  # Invert images as needed
+            video_filename = f'tmp_video_{task_id}_run_{i}.mp4'
+            writer = imageio.get_writer(video_filename, fps=30)
+            for image in images:
+                writer.append_data(image)
+            writer.close()
+            video_paths.append(video_filename)
+            obs_tensors = [[] for _ in range(env_num)]  # Reset after each run
 
-            # # a new form of success record
-            # for k in range(env_num):
-            #     if i * env_num + k < cfg.eval.n_eval:
-            #         num_success += int(dones[k])
+        # Display the last video generated
+        if video_paths:
+            last_video_data = open(video_paths[-1], "rb").read()
+            video_tag = f'<video controls alt="test" src="data:video/mp4;base64,{b64encode(last_video_data).decode()}">'
+            display(HTML(data=video_tag))
+            print(f"Video saved at: {os.path.abspath(video_paths[-1])}")
 
-        #print("num sucesses = " + str(num_success))
         success_rate = num_success / cfg.eval.n_eval
         env.close()
         gc.collect()
+
     print(f"[info] evaluate task {task_id} takes {t.get_elapsed_time():.1f} seconds")
     return success_rate
 

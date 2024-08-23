@@ -127,19 +127,10 @@ class ControlEnv:
         self.env._update_observables(force=force)
 
     def set_state(self, mujoco_state):
-        print(mujoco_state)
-
         """
         We effectively override the self.env.sim.set_state_from_flattened(mujoco_state) call by rewriting it here,
          giving us a chance to fix the size mismatch
         """
-        #state = MjSimState.from_flattened(mujoco_state, self.env.sim)
-        #state = self.env.sim.get_state()
-        env = self.env
-        state = self.env.sim #MjSim
-        data = self.env.sim.data
-
-        # , MjSimState
         state = MjSimState.from_flattened(mujoco_state, self.env.sim)
 
         print("self.env.sim.data.qpos.shape:", self.env.sim.data.qpos.shape)

@@ -219,6 +219,7 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
                 ci = confidence_interval(success_rate, self.cfg.eval.n_eval)
                 tmp_successes = np.array(successes)
                 tmp_successes[idx_at_best_succ:] = successes[idx_at_best_succ]
+
                 print(
                     f"[info] Epoch: {epoch:3d} | succ: {success_rate:4.2f} ± {ci:4.2f} | best succ: {prev_success_rate} "
                     + f"| succ. AoC {tmp_successes.sum()/cumulated_counter:4.2f} | time: {(t1-t0)/60:4.2f}",

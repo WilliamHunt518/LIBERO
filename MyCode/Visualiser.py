@@ -46,6 +46,15 @@ class Visualiser:
             "camera_widths": self.cfg.data.img_w,
         }
 
+        # Use the get method to safely access the 'robots' attribute
+        robots = self.cfg.get("robots", None)
+
+        if robots is not None:
+            env_args["robots"] = robots
+            print("Config overrides robot type to: " + str(self.cfg.robots))
+        else:
+            print("Not found")
+
         env = DummyVectorEnv(
             [lambda: OffScreenRenderEnv(**env_args) for _ in range(self.env_num)]
         )
@@ -77,9 +86,12 @@ class Visualiser:
             obs, reward, done, info = env.step(action)
 
             for k in range(self.env_num):
-                dones[k] = dones[k] or done[k]
+                #dones[k] = dones[k] or done[k]
                 obs_tensors[k].append(obs[k]["agentview_image"])
-            if all(dones):
+            # if all(dones):
+            #     break
+
+            if env.workers[0].env.env.done:
                 break
 
         images = [img[::-1] for img in obs_tensors[0]]

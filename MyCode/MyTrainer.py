@@ -31,7 +31,7 @@ class MyTrainer:
             'S_fwd': np.zeros((n_tasks,)),
         }
 
-    def train(self):
+    def train(self, run_num):
         self.checkpoint_dir = os.path.join(self.cfg.experiment_dir, "checkpoints")
         self.cfg.shape_meta = self.shape_meta
 
@@ -40,14 +40,11 @@ class MyTrainer:
         gsz = self.cfg.data.task_group_size
 
         for i in trange(self.benchmark.n_tasks):
+            print("Training for task " + str(i))
             self.algo.train()
             s_fwd, l_fwd = self.algo.learn_one_task(self.datasets[i], i, self.benchmark, self.result_summary)
             self.result_summary["S_fwd"][i] = s_fwd
             self.result_summary["L_fwd"][i] = l_fwd
-
-            # Save checkpoint after each task
-            checkpoint_path = os.path.join(self.checkpoint_dir, f"checkpoint_task_{i}.pth")
-            self.algo.save_checkpoint(checkpoint_path)
 
             if self.cfg.eval.eval:
                 self.algo.eval()
@@ -59,5 +56,5 @@ class MyTrainer:
                 torch.save(self.result_summary, os.path.join(self.cfg.experiment_dir, 'result.pt'))
 
         # Save final model
-        final_model_path = os.path.join(self.cfg.experiment_dir, "final_model.pth")
+        final_model_path = os.path.join(self.cfg.experiment_dir, f"final_model_{run_num}.pth")
         self.algo.save_checkpoint(final_model_path)
