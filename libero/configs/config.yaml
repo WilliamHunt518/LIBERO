@@ -3,7 +3,7 @@
 defaults:
   - _self_
   - data: default
-  - policy: my_bc_transformer_policy
+  - policy: bc_transformer_policy
   - train: default
   - eval: default
   - lifelong: base
@@ -21,4 +21,4 @@ task_embedding_format: "bert"
 task_embedding_one_hot_offset: 1
 pretrain: false
 pretrain_model_path: ""
-benchmark_name: "my_new_rob_set"
+benchmark_name: "LIBERO_SPATIAL"

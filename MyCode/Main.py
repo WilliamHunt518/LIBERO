@@ -1,4 +1,5 @@
 import os
+import time
 
 import numpy as np
 import torch
@@ -36,7 +37,7 @@ class Main:
         #self.cfg.eval.n_eval = 1
         # Set to 25 in real scenarios
 
-        # Checkpoint saved to ./experiments/miniset_3/Sequential/MyBCTransformerPolicy_seed10000/run_027/final_model.pth
+        # Checkpoint saved to ./experiments/miniset_1/Sequential/MyBCTransformerPolicy_seed10000/run_027/final_model.pth
         # /home/will/Documents/Libero/GIT_LOCAL_ROOT/LIBERO/MyCode/tmp_video_orig.mp4
 
         # You can turn on subprocess
@@ -57,27 +58,45 @@ class Main:
         checkpoint_dir = os.path.join(self.cfg.experiment_dir, "checkpoints")
 
         # Step 3: Initialize and train or load checkpoint
-        trainer = MyTrainer(self.cfg, self.shape_meta, self.datasets, self.benchmark, checkpoint_dir)
+        self.trainer = MyTrainer(self.cfg, self.shape_meta, self.datasets, self.benchmark, checkpoint_dir)
 
-        NUM_TRAINING_LOOPS = 10
-        self.cfg.train.n_epochs = 5  # We alter the training code so this is # epochs for a task within the higher loop
+
+
+        NUM_TRAINING_LOOPS = 1 #(We did 60 in sequence for run 010)
+        self.cfg.train.n_epochs = 20  # We alter the training code so this is # epochs for a task within the higher loop
+        # ~3.5min per epoch
+        # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 3.5/60 = 10
+        # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 0.05 = 10
+        # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS = 200
 
         print("With chkpt dir = " + checkpoint_dir)
 
-        load = False
+        load = True
         if load:
-            checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_008", "final_model_0.pth")
+            checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_006", "final_model_1.pth")
             #checkpoint_path = "./TrainedModels/run_027/checkpoints/checkpoint_task_0.pth"
             if os.path.exists(checkpoint_path):
-                trainer.algo.load_checkpoint(checkpoint_path)
+                self.trainer.algo.load_checkpoint(checkpoint_path)
                 print("Checkpoint loaded, resuming training...")
             else:
                 print("No checkpoint found, exiting")
                 quit()
         else:
             print("Training new model from scratch")
-            for i in range(0, NUM_TRAINING_LOOPS):
-                trainer.train(i)
+            print(f"Training loops: {NUM_TRAINING_LOOPS}")
+            print(f"Epochs: {self.cfg.train.n_epochs}")
+            start = time.time()
+
+            for i in range(1, NUM_TRAINING_LOOPS + 1):
+                print(f"Run num {i}")
+                elapsed = time.time() - start
+                print(f"Elapsed time: {elapsed}, and we are {i}/{NUM_TRAINING_LOOPS}")
+
+                avg_time_per_iteration = elapsed / i
+                eta = avg_time_per_iteration * (NUM_TRAINING_LOOPS + 1 - i)#( elapsed * (NUM_TRAINING_LOOPS / i) )
+                print(f"This means we have {eta} seconds left")
+
+                self.trainer.train(i)
 
     # ------ Perform Evaluation ------- #
         # Step 1: Load configuration
@@ -97,7 +116,7 @@ class Main:
         #datasets, shape_meta = dataset_preparation.get_datasets()
 
         # Step 5: Perform evaluation
-        #self.evaluate()
+        self.evaluate()
         #UR5e: Task 0: Loss AUC = 5.2222746775700495, Success Rate = 0.0
         #Panda:Task 0: Loss AUC = 5.296631717681885,  Success Rate = 0.0
 
@@ -114,9 +133,9 @@ class Main:
         Perform evaluation on the loaded model.
         """
         print("Evaluating")
-        self.algo = safe_device(MyLifelong(self.benchmark.n_tasks, self.cfg), self.cfg.device)
+        #self.algo = safe_device(MyLifelong(self.benchmark.n_tasks, self.cfg), self.cfg.device)
 
-        self.algo.eval()
+        self.trainer.algo.eval()
         gsz = self.cfg.data.task_group_size
         result_summary = {
             'L_conf_mat': np.zeros((self.benchmark.n_tasks, self.benchmark.n_tasks)),
@@ -128,8 +147,8 @@ class Main:
         for i in range(self.benchmark.n_tasks):
             print("    -> Evaluating task " + str(i))
             # Evaluate loss and success
-            L = evaluate_loss(self.cfg, self.algo, self.benchmark, self.datasets[:i + 1])
-            S = evaluate_success(self.cfg, self.algo, self.benchmark, list(range((i + 1) * gsz)))
+            L = evaluate_loss(self.cfg, self.trainer.algo, self.benchmark, self.datasets[:i + 1])
+            S = evaluate_success(self.cfg, self.trainer.algo, self.benchmark, list(range((i + 1) * gsz)))
             #S = evaluate_success(self.cfg, self.algo, self.benchmark, [0])
 
             result_summary["L_conf_mat"][i][:i + 1] = L

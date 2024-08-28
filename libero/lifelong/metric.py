@@ -81,7 +81,7 @@ def evaluate_one_task_success(
             ),
             "camera_heights": cfg.data.img_h,
             "camera_widths": cfg.data.img_w,
-            "horizon": 10_000
+            "horizon": 2_000
         }
 
         robots = cfg.get("robots", None)

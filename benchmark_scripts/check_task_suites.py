@@ -54,6 +54,7 @@ def main():
         "libero_goal",
         "libero_spatial",
         "libero_10",
+        "miniset_1",
         "libero_90",
     ]:
         benchmark_instance = benchmark.get_benchmark_dict()[benchmark_name]()

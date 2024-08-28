@@ -21,6 +21,7 @@ def shasum_datasets(download_dir="datasets"):
         "libero_goal",
         "libero_spatial",
         "libero_10",
+        "miniset_1",
         "libero_90",
     ]:
         dataset_dir = os.path.join(download_dir, dataset_name)

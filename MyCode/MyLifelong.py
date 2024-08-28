@@ -35,7 +35,7 @@ class MyLifelong(Sequential):
         Load the model state from a file.
         """
         checkpoint = torch.load(filepath)
-        #self.policy.load_state_dict(checkpoint['model_state_dict'])
+        self.policy.load_state_dict(checkpoint['model_state_dict'])
         #self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.cfg = checkpoint['cfg']
         #self.task_idx = checkpoint['task_idx']

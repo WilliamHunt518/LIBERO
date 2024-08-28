@@ -59,7 +59,7 @@ libero_suites = [
     "libero_goal",
     "libero_90",
     "libero_10",
-    "miniset_3",
+    "miniset_1"
 ]
 task_maps = {}
 max_len = 0
@@ -82,6 +82,7 @@ for libero_suite in libero_suites:
 
 
 task_orders = [
+    [0],
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     [4, 6, 8, 7, 3, 1, 2, 0, 9, 5],
     [6, 3, 5, 0, 4, 2, 9, 1, 8, 7],
@@ -219,29 +220,11 @@ class LIBERO_100(Benchmark):
         self.name = "libero_100"
         self._make_benchmark()
 
-
 @register_benchmark
-class miniset_3(Benchmark):
+class MINISET_1(Benchmark):
     def __init__(self, task_order_index=0):
         super().__init__(task_order_index=task_order_index)
-        self.name = "miniset_3"
+        self.name = "miniset_1"
         self._make_benchmark()
-
-    # def _make_benchmark(self):
-    #     tasks = list(task_maps[self.name].values())
-    #     print(f"[info] using task orders {task_orders[self.task_order_index]}")
-    #     self.tasks = [tasks[i] for i in task_orders[self.task_order_index]]
-    #     self.n_tasks = len(self.tasks)
-    #
-    #     # Create new Task NamedTuples with the modified 'problem' attribute
-    #     self.tasks = [Task(
-    #         name=t.name,
-    #         language=t.language,
-    #         problem="test",
-    #         problem_folder=t.problem_folder,
-    #         bddl_file=t.bddl_file,
-    #         init_states_file=t.init_states_file
-    #     ) for t in self.tasks]
-
 
 
