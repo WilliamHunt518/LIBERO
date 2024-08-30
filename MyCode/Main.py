@@ -63,7 +63,7 @@ class Main:
 
 
         NUM_TRAINING_LOOPS = 1 #(We did 60 in sequence for run 010)
-        self.cfg.train.n_epochs = 20  # We alter the training code so this is # epochs for a task within the higher loop
+        self.cfg.train.n_epochs = 5 # We alter the training code so this is # epochs for a task within the higher loop
         # ~3.5min per epoch
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 3.5/60 = 10
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 0.05 = 10
@@ -71,9 +71,9 @@ class Main:
 
         print("With chkpt dir = " + checkpoint_dir)
 
-        load = True
+        load = False
         if load:
-            checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_006", "final_model_1.pth")
+            checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_016", "final_model_1.pth")
             #checkpoint_path = "./TrainedModels/run_027/checkpoints/checkpoint_task_0.pth"
             if os.path.exists(checkpoint_path):
                 self.trainer.algo.load_checkpoint(checkpoint_path)
