@@ -1,4 +1,5 @@
 import os
+import random
 import time
 
 import numpy as np
@@ -21,6 +22,7 @@ class Main:
         self.cfg = None
         self.benchmark = None
         self.algo = None
+        self.random = random.Random()
 
     def main(self):
         torch.cuda.empty_cache()
@@ -54,6 +56,9 @@ class Main:
         dataset_preparation.prepare_datasets()
         self.datasets, self.shape_meta = dataset_preparation.get_datasets()
 
+        #RANDOM_SEED = self.random.randint(0, 100_000)
+        #self.cfg.seed = RANDOM_SEED
+
         create_experiment_dir(self.cfg)
         checkpoint_dir = os.path.join(self.cfg.experiment_dir, "checkpoints")
 
@@ -63,26 +68,16 @@ class Main:
 
 
         NUM_TRAINING_LOOPS = 1 #(We did 60 in sequence for run 010)
-        self.cfg.train.n_epochs = 5 # We alter the training code so this is # epochs for a task within the higher loop
+        N_EPOCHS = 3 # We alter the training code so this is # epochs for a task within the higher loop
+        self.cfg.train.n_epochs = N_EPOCHS
         # ~3.5min per epoch
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 3.5/60 = 10
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 0.05 = 10
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS = 200
 
-        print("With chkpt dir = " + checkpoint_dir)
+        def start_training(checkpoint_dir=None, resume_args=None, n_epochs=5):
+            print("now training, cfg = " + str(self.cfg))
 
-        load = False
-        if load:
-            checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_016", "final_model_1.pth")
-            #checkpoint_path = "./TrainedModels/run_027/checkpoints/checkpoint_task_0.pth"
-            if os.path.exists(checkpoint_path):
-                self.trainer.algo.load_checkpoint(checkpoint_path)
-                print("Checkpoint loaded, resuming training...")
-            else:
-                print("No checkpoint found, exiting")
-                quit()
-        else:
-            print("Training new model from scratch")
             print(f"Training loops: {NUM_TRAINING_LOOPS}")
             print(f"Epochs: {self.cfg.train.n_epochs}")
             start = time.time()
@@ -93,10 +88,51 @@ class Main:
                 print(f"Elapsed time: {elapsed}, and we are {i}/{NUM_TRAINING_LOOPS}")
 
                 avg_time_per_iteration = elapsed / i
-                eta = avg_time_per_iteration * (NUM_TRAINING_LOOPS + 1 - i)#( elapsed * (NUM_TRAINING_LOOPS / i) )
+                eta = avg_time_per_iteration * (NUM_TRAINING_LOOPS + 1 - i)
                 print(f"This means we have {eta} seconds left")
 
-                self.trainer.train(i)
+                self.trainer.train(i, checkpoint_dir, resume_args, n_epochs)
+
+        print("With chkpt dir = " + checkpoint_dir)
+
+        load = True
+        train = True
+
+        if load:
+            #checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_022", "final_model_1.pth")
+            #checkpoint_dir = os.path.join(self.cfg.experiment_dir, "../run_022", "checkpoints")
+            # checkpoint_path = "./TrainedModels/GoodModels/run_022/final_model_1.pth"
+
+            checkpoint_path = os.path.join(self.cfg.experiment_dir, "../../MyBCTransformerPolicy_seed10000/run_087", "final_model_1.pth")
+            checkpoint_dir = os.path.join(self.cfg.experiment_dir, "../../MyBCTransformerPolicy_seed10000/run_087", "checkpoints")
+
+
+            print("Updated chkpt dir = " + checkpoint_path)
+            if os.path.exists(checkpoint_path):
+                self.trainer.checkpoint_dir = checkpoint_dir
+
+                self.cfg, resume_args = self.trainer.algo.load_checkpoint(checkpoint_path)
+                self.trainer.algo.experiment_dir = os.path.join(self.cfg.experiment_dir, "../../MyBCTransformerPolicy_seed10000/run_087")
+                self.trainer.checkpoint_dir = checkpoint_dir
+
+                #self.cfg.seed = RANDOM_SEED
+
+                print("Loading checkpoint:")
+                print("loaded cfg = " + str(self.cfg))
+
+                self.cfg.train.n_epochs = N_EPOCHS
+
+                print("Checkpoint loaded, resuming training...")
+
+                if train:
+                    self.trainer.algo.train()
+
+                    start_training(checkpoint_path, resume_args, n_epochs)
+            else:
+                print("No checkpoint found, exiting")
+                quit()
+        elif train:
+            start_training()
 
     # ------ Perform Evaluation ------- #
         # Step 1: Load configuration
@@ -116,6 +152,7 @@ class Main:
         #datasets, shape_meta = dataset_preparation.get_datasets()
 
         # Step 5: Perform evaluation
+        print("===============================================EVAL====================================================")
         self.evaluate()
         #UR5e: Task 0: Loss AUC = 5.2222746775700495, Success Rate = 0.0
         #Panda:Task 0: Loss AUC = 5.296631717681885,  Success Rate = 0.0

@@ -86,9 +86,11 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
         self.current_task = task
 
         # initialize the optimizer and scheduler
-        self.optimizer = eval(self.cfg.train.optimizer.name)(
-            self.policy.parameters(), **self.cfg.train.optimizer.kwargs
-        )
+        if not hasattr(self, 'optimizer'):
+            self.optimizer = eval(self.cfg.train.optimizer.name)(
+                self.policy.parameters(), **self.cfg.train.optimizer.kwargs
+            )
+
 
         self.scheduler = None
         if self.cfg.train.scheduler is not None:
@@ -125,17 +127,18 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
             loss = self.policy.compute_loss(data)
         return loss.item()
 
-    def learn_one_task(self, dataset, task_id, benchmark, result_summary):
+    def learn_one_task(self, dataset, task_id, benchmark, result_summary, resume_args=None):
 
         self.start_task(task_id)
 
         # recover the corresponding manipulation task ids
         gsz = self.cfg.data.task_group_size
         manip_task_ids = list(range(task_id * gsz, (task_id + 1) * gsz))
-
+        print("expdir = " + str(self.experiment_dir))
         model_checkpoint_name = os.path.join(
             self.experiment_dir, f"task{task_id}_model.pth"
         )
+        print("MCN = " + str(model_checkpoint_name))
 
         train_dataloader = DataLoader(
             dataset,
@@ -145,15 +148,24 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
             persistent_workers=True,
         )
 
-        prev_success_rate = -1.0
-        best_state_dict = self.policy.state_dict()  # currently save the best model
+        if resume_args is None:
+            prev_success_rate = -1.0
+            best_state_dict = self.policy.state_dict()  # currently save the best model
 
-        # for evaluate how fast the agent learns on current task, this corresponds
-        # to the area under success rate curve on the new task.
-        cumulated_counter = 0.0
-        idx_at_best_succ = 0
-        successes = []
-        losses = []
+            # for evaluate how fast the agent learns on current task, this corresponds
+            # to the area under success rate curve on the new task.
+            cumulated_counter = 0.0
+            idx_at_best_succ = 0
+            successes = []
+            losses = []
+        else:
+            prev_success_rate = resume_args[0]
+            best_state_dict = resume_args[1]
+
+            cumulated_counter = resume_args[2]
+            idx_at_best_succ = resume_args[3]
+            successes = resume_args[4].tolist()
+            losses = resume_args[5].tolist()
 
         task = benchmark.get_task(task_id)
         task_emb = benchmark.get_task_emb(task_id)
@@ -182,7 +194,7 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
                 f"[info] Epoch: {epoch:3d} | train loss: {training_loss:5.2f} | time: {(t1-t0)/60:4.2f}"
             )
 
-            if epoch % self.cfg.eval.eval_every == 0:  # evaluate BC loss
+            if epoch % self.cfg.eval.eval_every == 0:# and epoch != 0:  # evaluate BC loss
                 # every eval_every epoch, we evaluate the agent on the current task,
                 # then we pick the best performant agent on the current task as
                 # if it stops learning after that specific epoch. So the stopping
@@ -209,6 +221,7 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
                 successes.append(success_rate)
 
                 if prev_success_rate < success_rate:
+                    print("Saving model to " + str(model_checkpoint_name))
                     torch_save_model(self.policy, model_checkpoint_name, cfg=self.cfg)
                     prev_success_rate = success_rate
                     idx_at_best_succ = len(losses) - 1
@@ -230,7 +243,13 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
                 self.scheduler.step()
 
         # load the best performance agent on the current task
-        self.policy.load_state_dict(torch_load_model(model_checkpoint_name)[0])
+        print("Loading model from " + str(model_checkpoint_name))
+
+        try:
+            self.policy.load_state_dict(torch_load_model(model_checkpoint_name)[0])
+        except:
+            print("New model < Old model, loading that")
+            self.policy.load_state_dict(torch_load_model(self.cfg.experiment_dir)[0])
 
         # end learning the current task, some algorithms need post-processing
         self.end_task(dataset, task_id, benchmark)
@@ -249,10 +268,19 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
             auc_checkpoint_name,
         )
 
+        resume_args = [
+            prev_success_rate,
+            self.policy.state_dict(),
+            cumulated_counter,
+            idx_at_best_succ,
+            successes,
+            losses
+        ]
+
         # pretend that the agent stops learning once it reaches the peak performance
         losses[idx_at_best_succ:] = losses[idx_at_best_succ]
         successes[idx_at_best_succ:] = successes[idx_at_best_succ]
-        return successes.sum() / cumulated_counter, losses.sum() / cumulated_counter
+        return successes.sum() / cumulated_counter, losses.sum() / cumulated_counter, resume_args
 
     def reset(self):
         self.policy.reset()

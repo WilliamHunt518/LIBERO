@@ -8,6 +8,7 @@ class MyLifelong(Sequential):
         self.datasets = []
         self.policy = eval(cfg.policy.policy_type)(cfg, cfg.shape_meta)
 
+
     def start_task(self, task):
         super().start_task(task)
 
@@ -18,15 +19,16 @@ class MyLifelong(Sequential):
         loss = super().observe(data)
         return loss
 
-    def save_checkpoint(self, filepath):
+    def save_checkpoint(self, filepath, resume_args):
         """
         Save the current model state to a file.
         """
+
         torch.save({
             'model_state_dict': self.policy.state_dict(),
-            #'optimizer_state_dict': self.optimizer.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
             'cfg': self.cfg,
-            #'task_idx': self.task_idx,
+            'resume_args': resume_args
         }, filepath)
         print(f"Checkpoint saved to {filepath}")
 
@@ -35,8 +37,18 @@ class MyLifelong(Sequential):
         Load the model state from a file.
         """
         checkpoint = torch.load(filepath)
-        self.policy.load_state_dict(checkpoint['model_state_dict'])
-        #self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.cfg = checkpoint['cfg']
-        #self.task_idx = checkpoint['task_idx']
+        self.policy.load_state_dict(checkpoint['model_state_dict'])
+
+        self.optimizer = eval(self.cfg.train.optimizer.name)(
+            self.policy.parameters(), **self.cfg.train.optimizer.kwargs
+        )
+
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        resume_args = checkpoint['resume_args']
+        self.policy.eval()
         print(f"Checkpoint loaded from {filepath}")
+        return self.cfg, resume_args
+
+
