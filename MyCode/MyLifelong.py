@@ -3,10 +3,12 @@ from libero.lifelong.algos.base import Sequential
 from my_bc_transformer_policy import MyBCTransformerPolicy
 
 class MyLifelong(Sequential):
-    def __init__(self, n_tasks, cfg, **policy_kwargs):
-        super().__init__(n_tasks=n_tasks, cfg=cfg, **policy_kwargs)
+    def __init__(self, n_tasks, cfg, my_encdec, **policy_kwargs):
+        super().__init__(n_tasks=n_tasks, cfg=cfg, my_encdec=my_encdec, **policy_kwargs)
         self.datasets = []
-        self.policy = eval(cfg.policy.policy_type)(cfg, cfg.shape_meta)
+        self.policy = eval(cfg.policy.policy_type)(cfg, cfg.shape_meta, my_encdec)
+        self.my_encdec = my_encdec
+
 
 
     def start_task(self, task):

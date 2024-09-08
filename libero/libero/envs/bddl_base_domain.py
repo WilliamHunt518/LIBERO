@@ -603,6 +603,8 @@ class BDDLBaseDomain(SingleArmEnv):
                     conditioned_initial_place_state_on_sites.append(state)
                     continue
                 if self.is_fixture(object_name):
+                    # TODO I'm not sure exactly where, but somewhere the use of ur5e stops the bowl being placed and the draw being open
+
                     # This is to place environment fixtures.
                     fixture_sampler = MultiRegionRandomSampler(
                         f"{object_name}_sampler",

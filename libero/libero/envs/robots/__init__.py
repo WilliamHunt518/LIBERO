@@ -9,6 +9,7 @@ ROBOT_CLASS_MAPPING.update(
     {
         "MountedPanda": SingleArm,
         "OnTheGroundPanda": SingleArm,
-        "MountedUR5e": SingleArm
+        "MountedUR5e": SingleArm,
+        "OnTheGroundUR5e": SingleArm,
     }
 )

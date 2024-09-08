@@ -22,4 +22,4 @@ task_embedding_one_hot_offset: 1
 pretrain: false
 pretrain_model_path: ""
 benchmark_name: "miniset_1"#"libero_10"
-robots: ["Panda"]
+robots: ["UR5e"]

@@ -216,3 +216,37 @@ class Libero_Kitchen_Tabletop_Manipulation(BDDLBaseDomain):
             pos=[2.1, 0.535, 2.075],
             quat=[0.513, 0.353, 0.443, 0.645],
         )
+
+    def __repr__(self):
+        # Helper function to format objects with positions and other details
+        def format_object_dict(obj_dict):
+            return "\n    ".join(
+                [
+                    (
+                        f"{name}: "
+                        f"Pos={getattr(obj, 'pos', 'N/A')}, "
+                        f"Size={getattr(obj, 'size', 'N/A')}, "
+                        f"Rotation={getattr(obj, 'quat', 'N/A')}, "
+                        f"Velocity={getattr(obj, 'vel', 'N/A')}, "
+                        f"Other Properties={getattr(obj, 'object_properties', 'N/A')}"
+                    )
+                    for name, obj in obj_dict.items()
+                ]
+            )
+
+        return (
+            f"Libero_Kitchen_Tabletop_Manipulation(\n"
+            f"  Workspace Name: {self.workspace_name}\n"
+            f"  Kitchen Table Full Size: {self.kitchen_table_full_size}\n"
+            f"  Kitchen Table Offset: {self.kitchen_table_offset}\n"
+            f"  Z Offset: {self.z_offset}\n"
+            f"  Robots: {self.robots if hasattr(self, 'robots') else 'Not initialized'}\n"
+            f"  Visualization Sites: {self.visualization_sites_list}\n"
+            f"  Fixtures: \n    {format_object_dict(self.fixtures_dict) if hasattr(self, 'fixtures_dict') else 'Not loaded'}\n"
+            f"  Objects: \n    {format_object_dict(self.objects_dict) if hasattr(self, 'objects_dict') else 'Not loaded'}\n"
+            f"  Object Sites: {list(self.object_sites_dict.keys()) if hasattr(self, 'object_sites_dict') else 'Not initialized'}\n"
+            f"  Arena Scene XML: {self.arena_type if hasattr(self, 'arena_type') else 'Not initialized'}\n"
+            f"  Cameras: {self.cameras if hasattr(self, 'cameras') else 'Not initialized'}\n"
+            f")"
+        )
+

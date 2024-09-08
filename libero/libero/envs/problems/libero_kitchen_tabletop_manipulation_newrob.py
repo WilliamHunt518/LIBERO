@@ -26,6 +26,10 @@ class LIBERO_Kitchen_Tabletop_Manipulation_NewRob(BDDLBaseDomain):
         #    {"robots": [f"Mounted{robot_name}" for robot_name in kwargs["robots"]]}
         #)
 
+        kwargs.update(
+            {"robots": [f"Mounted{robot_name}" for robot_name in kwargs["robots"]]}
+        )
+
 
         kwargs.update({"workspace_offset": self.kitchen_table_offset})
         kwargs.update({"arena_type": "kitchen"})

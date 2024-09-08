@@ -51,7 +51,7 @@ def raw_obs_to_tensor_obs(obs, task_emb, cfg):
 
 
 def evaluate_one_task_success(
-    cfg, algo, task, task_emb, task_id, sim_states=None, task_str=""
+    cfg, algo, task, task_emb, task_id, my_encdec=None, sim_states=None, task_str=""
 ):
     """
     Evaluate a single task's success rate
@@ -91,6 +91,12 @@ def evaluate_one_task_success(
         else:
             print("Not found")
 
+        print(cfg)
+
+        if my_encdec is not None:
+            print("Setting decoder to " + str(my_encdec))
+            env_args["my_encdec"] = my_encdec
+
 
         if env_num == 1:
             env = DummyVectorEnv(
@@ -112,6 +118,43 @@ def evaluate_one_task_success(
         # Video recording variables
         obs_tensors = [[] for _ in range(env_num)]
         video_paths = []
+
+        # Final comprehensive output statement
+        print("------------------------------")
+        print("Evaluation Setup:")
+        print(f"Algorithm: {algo}")
+        print(f"Task ID: {task_id}")
+        print(f"Algorithm Lifelong Algo: {cfg.lifelong.algo}")
+        print(f"Evaluation Mode: {cfg.eval.num_procs} processes, {cfg.eval.n_eval} evaluations")
+        print(f"Multi-processing: {'Enabled' if cfg.eval.use_mp else 'Disabled'}")
+        print(f"Number of environments: {env_num}")
+        print(f"Evaluation loops: {eval_loop_num}")
+        print("------------------------------")
+        print("Environment Arguments:")
+        print(f"BDDL File Name: {env_args['bddl_file_name']}")
+        print(f"Camera Heights: {env_args['camera_heights']}")
+        print(f"Camera Widths: {env_args['camera_widths']}")
+        print(f"Horizon: {env_args['horizon']}")
+        if "robots" in env_args:
+            print(f"Robot Type: {env_args['robots']}")
+        else:
+            print("Robot Type: Not specified in configuration")
+        print("------------------------------")
+        if my_encdec is not None:
+            print(f"Encoder/Decoder: {env_args['my_encdec']}")
+        else:
+            print("Encoder/Decoder: None")
+        print("------------------------------")
+        print("Initialization:")
+        print(f"Environment Creation: {'Success' if env_creation else 'Failed'}")
+        print(f"Initial States Path: {init_states_path}")
+        print(f"Number of Successes: {num_success}")
+        print("------------------------------")
+        print("Video Recording:")
+        print(f"Observation Tensors: {len(obs_tensors)} tensors")
+        print(f"Video Paths: {len(video_paths)} paths recorded")
+
+        print("10" + str(env))
 
         for i in range(eval_loop_num):
             print("Eval run " + str(i))
@@ -174,6 +217,7 @@ def evaluate_one_task_success(
 
             # Create video for each evaluation run
             images = [img[::-1] for img in obs_tensors[0]]  # Invert images as needed
+            print("11" + str(env))
             video_filename = f'tmp_video_{task_id}_run_{i}.mp4'
             writer = imageio.get_writer(video_filename, fps=30)
             for image in images:
@@ -209,7 +253,7 @@ def evaluate_success(cfg, algo, benchmark, task_ids, result_summary=None):
         task_str = f"k{task_ids[-1]}_p{i}"
         curr_summary = result_summary[task_str] if result_summary is not None else None
         success_rate = evaluate_one_task_success(
-            cfg, algo, task_i, task_emb, i, sim_states=curr_summary, task_str=task_str
+            cfg, algo, task_i, task_emb, i, algo.my_encdec, sim_states=curr_summary, task_str=task_str
         )
         successes.append(success_rate)
     return np.array(successes)

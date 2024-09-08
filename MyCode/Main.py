@@ -7,6 +7,7 @@ import torch
 
 from ConfigLoader import ConfigLoader
 from DatasetCreator import DatasetCreator
+from MyCode.EncDec1 import EncDec1
 from MyCode.MyLifelong import MyLifelong
 #from MyCode.ModelEval import ModelEval
 from MyCode.Visualiser import Visualiser
@@ -62,20 +63,25 @@ class Main:
         create_experiment_dir(self.cfg)
         checkpoint_dir = os.path.join(self.cfg.experiment_dir, "checkpoints")
 
+        self.encDec = EncDec1()
+
         # Step 3: Initialize and train or load checkpoint
-        self.trainer = MyTrainer(self.cfg, self.shape_meta, self.datasets, self.benchmark, checkpoint_dir)
+        self.trainer = MyTrainer(self.cfg, self.shape_meta, self.datasets, self.benchmark, checkpoint_dir, self.encDec)
+
+
 
 
 
         NUM_TRAINING_LOOPS = 1 #(We did 60 in sequence for run 010)
-        N_EPOCHS = 3 # We alter the training code so this is # epochs for a task within the higher loop
+        N_EPOCHS = 1 # We alter the training code so this is # epochs for a task within the higher loop
+        ROBOTS = ["Panda"]
         self.cfg.train.n_epochs = N_EPOCHS
         # ~3.5min per epoch
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 3.5/60 = 10
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS * 0.05 = 10
         # 8-10hr target. n_epoch * NUM_TRAINING_LOOPS = 200
 
-        def start_training(checkpoint_dir=None, resume_args=None, n_epochs=5):
+        def train_standard(checkpoint_dir=None, resume_args=None, n_epochs=5):
             print("now training, cfg = " + str(self.cfg))
 
             print(f"Training loops: {NUM_TRAINING_LOOPS}")
@@ -91,12 +97,32 @@ class Main:
                 eta = avg_time_per_iteration * (NUM_TRAINING_LOOPS + 1 - i)
                 print(f"This means we have {eta} seconds left")
 
-                self.trainer.train(i, checkpoint_dir, resume_args, n_epochs)
+                self.trainer.train(run_num=i, checkpoint_dir=checkpoint_dir, resume_args=resume_args, n_epochs=n_epochs, my_encdec=self.encDec, robots=ROBOTS)
+
+        def train_new_arch(checkpoint_dir=None, resume_args=None, n_epochs=5):
+            print("now training, cfg = " + str(self.cfg))
+
+            print(f"Training loops: {NUM_TRAINING_LOOPS}")
+            print(f"Epochs: {self.cfg.train.n_epochs}")
+            start = time.time()
+
+            for i in range(1, NUM_TRAINING_LOOPS + 1):
+                print(f"Run num {i}")
+                elapsed = time.time() - start
+                print(f"Elapsed time: {elapsed}, and we are {i}/{NUM_TRAINING_LOOPS}")
+
+                avg_time_per_iteration = elapsed / i
+                eta = avg_time_per_iteration * (NUM_TRAINING_LOOPS + 1 - i)
+                print(f"This means we have {eta} seconds left")
+
+                self.trainer.train(run_num=i, checkpoint_dir=checkpoint_dir, resume_args=resume_args,
+                                   n_epochs=n_epochs, my_encdec=self.encDec, robots=ROBOTS)
 
         print("With chkpt dir = " + checkpoint_dir)
 
-        load = True
-        train = True
+        load = False
+        train = False
+        new_arch = False
 
         if load:
             #checkpoint_path = os.path.join(self.cfg.experiment_dir, "../run_022", "final_model_1.pth")
@@ -112,6 +138,7 @@ class Main:
                 self.trainer.checkpoint_dir = checkpoint_dir
 
                 self.cfg, resume_args = self.trainer.algo.load_checkpoint(checkpoint_path)
+                # TODO add loading/saving of encdec also
                 self.trainer.algo.experiment_dir = os.path.join(self.cfg.experiment_dir, "../../MyBCTransformerPolicy_seed10000/run_087")
                 self.trainer.checkpoint_dir = checkpoint_dir
 
@@ -125,14 +152,15 @@ class Main:
                 print("Checkpoint loaded, resuming training...")
 
                 if train:
-                    self.trainer.algo.train()
-
-                    start_training(checkpoint_path, resume_args, n_epochs)
+                    if new_arch:
+                        train_new_arch(checkpoint_path, resume_args, N_EPOCHS)
+                    else:
+                        train_standard(checkpoint_path, resume_args, N_EPOCHS)
             else:
                 print("No checkpoint found, exiting")
                 quit()
         elif train:
-            start_training()
+            train_standard()
 
     # ------ Perform Evaluation ------- #
         # Step 1: Load configuration

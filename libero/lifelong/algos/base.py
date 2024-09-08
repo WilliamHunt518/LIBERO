@@ -57,7 +57,7 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
     learning algorithms.
     """
 
-    def __init__(self, n_tasks, cfg):
+    def __init__(self, n_tasks, cfg, my_encdec):
         super().__init__()
         self.cfg = cfg
         self.loss_scale = cfg.train.loss_scale
@@ -70,7 +70,7 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
         self.experiment_dir = cfg.experiment_dir
         self.algo = cfg.lifelong.algo
 
-        self.policy = get_policy_class(cfg.policy.policy_type)(cfg, cfg.shape_meta)
+        self.policy = get_policy_class(cfg.policy.policy_type)(cfg, cfg.shape_meta, my_encdec)
         self.current_task = -1
 
     def end_task(self, dataset, task_id, benchmark, env=None):
@@ -127,7 +127,8 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
             loss = self.policy.compute_loss(data)
         return loss.item()
 
-    def learn_one_task(self, dataset, task_id, benchmark, result_summary, resume_args=None):
+    def learn_one_task(self, dataset, task_id, benchmark, result_summary, resume_args=None, robots=None):
+        print("3" + str(self.env))
 
         self.start_task(task_id)
 
@@ -139,6 +140,13 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
             self.experiment_dir, f"task{task_id}_model.pth"
         )
         print("MCN = " + str(model_checkpoint_name))
+
+        print("At train_one_task, encdec = " + str(self.policy.my_encdec))
+        print()
+
+        if robots is None:
+            robots = ["Panda"]
+        self.cfg.robots = robots
 
         train_dataloader = DataLoader(
             dataset,
@@ -215,6 +223,7 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
                     task=task,
                     task_emb=task_emb,
                     task_id=task_id,
+                    my_encdec=self.policy.my_encdec,
                     sim_states=sim_states,
                     task_str="",
                 )
@@ -249,7 +258,10 @@ class Sequential(nn.Module, metaclass=AlgoMeta):
             self.policy.load_state_dict(torch_load_model(model_checkpoint_name)[0])
         except:
             print("New model < Old model, loading that")
-            self.policy.load_state_dict(torch_load_model(self.cfg.experiment_dir)[0])
+            model_checkpoint_name = os.path.join(
+                self.experiment_dir, f"task{task_id}_model.pth"
+            )
+            self.policy.load_state_dict(torch_load_model(model_checkpoint_name)[0])
 
         # end learning the current task, some algorithms need post-processing
         self.end_task(dataset, task_id, benchmark)

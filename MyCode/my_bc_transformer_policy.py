@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from MyCode.MyDecoder import encode_obs_model_side
+from MyCode.EncDec1 import EncDec1
 from libero.lifelong.models.modules.rgb_modules import *
 from libero.lifelong.models.modules.language_modules import *
 from libero.lifelong.models.base_policy import BasePolicy
@@ -157,9 +157,11 @@ class MyBCTransformerPolicy(BasePolicy):
     A Transformer policy that takes a sequence of observations and produces actions or distributions of actions.
     """
 
-    def __init__(self, cfg, shape_meta):
+    def __init__(self, cfg, shape_meta, my_encdec):
         super().__init__(cfg, shape_meta)
         policy_cfg = cfg.policy
+
+        self.my_encdec = my_encdec
 
         # 1. Encode image
         embed_size = policy_cfg.embed_size
@@ -283,7 +285,8 @@ class MyBCTransformerPolicy(BasePolicy):
             #             print(f"{''}{k} shape: {v.shape}")
             # print()
 
-            data = encode_obs_model_side(data)
+
+            data = self.my_encdec.encode_obs_model_side(data)
 
             # print("after:")
             # for key, value in data.items():

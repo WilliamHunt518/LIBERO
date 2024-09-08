@@ -2,26 +2,10 @@ import numpy as np
 import torch
 
 
-def encode_obs_model_side(data):
-    """
-        Pads the observation data so that the UR5e robot's data matches the Panda's format.
-    """
-    # Check if the data corresponds to the UR5e (based on the shape of the gripper_states or joint_states)
-    if data['obs']['gripper_states'].shape[-1] == 6:
-        # Truncate gripper_states to match Panda's format
-        data['obs']['gripper_states'] = data['obs']['gripper_states'][..., :2]
-
-        # Pad joint_states to match Panda's format
-        padding = (0, 1)  # Pad 1 zero to the end along the last dimension
-        data['obs']['joint_states'] = torch.nn.functional.pad(data['obs']['joint_states'], padding)
-
-    # Return the padded data
-    return data
-
-
-class MyDecoder():
+class EncDec1():
 
     def decode_env_side(self, qpos, qvel, qpos_target_shape, qvel_target_shape):
+        print("DECODING")
         # Note for now I am hardcoding the map from UR5e to Panda. Once we have the instantiation code and training code
         #  this can be sorted
         # Ensure the target shapes are tuples
@@ -52,4 +36,21 @@ class MyDecoder():
             padded_qvel = qvel
 
         return padded_qpos, padded_qvel
+
+
+    def encode_obs_model_side(self, data):
+        """
+            Pads the observation data so that the UR5e robot's data matches the Panda's format.
+        """
+        # Check if the data corresponds to the UR5e (based on the shape of the gripper_states or joint_states)
+        if data['obs']['gripper_states'].shape[-1] == 6:
+            # Truncate gripper_states to match Panda's format
+            data['obs']['gripper_states'] = data['obs']['gripper_states'][..., :2]
+
+            # Pad joint_states to match Panda's format
+            padding = (0, 1)  # Pad 1 zero to the end along the last dimension
+            data['obs']['joint_states'] = torch.nn.functional.pad(data['obs']['joint_states'], padding)
+
+        # Return the padded data
+        return data
 

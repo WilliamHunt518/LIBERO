@@ -9,7 +9,8 @@ from robosuite.utils.errors import RandomizationError
 import libero.libero.envs.bddl_utils as BDDLUtils
 from libero.libero.envs import *
 
-from MyCode.MyDecoder import MyDecoder
+from MyCode.EncDec1 import EncDec1
+
 
 class ControlEnv:
     def __init__(
@@ -40,6 +41,7 @@ class ControlEnv:
         camera_segmentations=None,
         renderer="mujoco",
         renderer_config=None,
+        my_encdec=None,
         **kwargs,
     ):
         assert os.path.exists(
@@ -48,13 +50,16 @@ class ControlEnv:
 
         controller_configs = suite.load_controller_config(default_controller=controller)
 
-        problem_info = BDDLUtils.get_problem_info(bddl_file_name)
         # Check if we're using a multi-armed environment and use env_configuration argument if so
+        problem_info = BDDLUtils.get_problem_info(bddl_file_name)
+
+        self.my_encdec = my_encdec
 
         # Create environment
         self.problem_name = problem_info["problem_name"]
         self.domain_name = problem_info["domain_name"]
         self.language_instruction = problem_info["language_instruction"]
+
         self.env = TASK_MAPPING[self.problem_name](
             bddl_file_name,
             robots=robots,
@@ -133,13 +138,17 @@ class ControlEnv:
         """
         state = MjSimState.from_flattened(mujoco_state, self.env.sim)
 
+        print("env = " + str(self.env))
+
         print("self.env.sim.data.qpos.shape:", self.env.sim.data.qpos.shape)
-        print("sself.env.sim.data.qvel.shape:", self.env.sim.data.qvel.shape)
+        print("self.env.sim.data.qvel.shape:", self.env.sim.data.qvel.shape)
         print("state.qpos.shape:", state.qpos.shape)
         print("state.qvel.shape:", state.qvel.shape)
 
-        my_decoder = MyDecoder()
-        newQPos, newQVel = my_decoder.decode_env_side(state.qpos, state.qvel, self.env.sim.data.qpos.shape, self.env.sim.data.qvel.shape)
+
+
+
+        newQPos, newQVel = self.my_encdec.decode_env_side(state.qpos, state.qvel, self.env.sim.data.qpos.shape, self.env.sim.data.qvel.shape)
 
         self.env.sim.data.qpos[:] = newQPos
         self.env.sim.data.qvel[:] = newQVel
@@ -160,11 +169,13 @@ class ControlEnv:
         return self.regenerate_obs_from_state(init_state)
 
     def regenerate_obs_from_state(self, mujoco_state):
+        print("1" + str(self.env))
         self.set_state(mujoco_state)
         self.env.sim.forward()
         self.check_success()
         self._post_process()
         self._update_observables(force=True)
+        print("2" + str(self.env))
         return self.env._get_observations()
 
     def close(self):
